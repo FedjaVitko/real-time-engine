@@ -4,28 +4,33 @@ window.addEventListener('load', () => {
     const engine = createEngine(canvas);
 
     window.addEventListener('beforeunload', function (e) {
-        localStorage.setItem('objects', engine.getSerializedObjects());
+        localStorage.setItem('objectPojos', engine.getSerializedObjects());
     });
-    const objects = localStorage.getItem('objects');
+    window.spawnRock = spawnRock;
+
+    const objects = localStorage.getItem('objectPojos');
+    let rock = null;
     if (objects) {
-        const obj = engine.deserializeObjects(objects);
-        console.log('wow!', obj); 
-        window.rock = obj;
+        const pojos = engine.deserializeObjects([objects]);
+        console.log('wow!', pojos[0]); 
+        rock = window['spawnRock'](engine, pojos[0]);
     } else {
-        const rock = spawnRock(engine); // Todo: unhappy with this injection
-        engine.addObject(rock);
-        window.rock = rock;
+        rock = spawnRock(engine); // Todo: unhappy with this injection
     }
+
+    engine.addObject(rock);
+    window.rock = rock;
 
     engine.start();
 });
 
-const spawnRock = (engine) => {
-    let color = 'red';
-    let x = 0;
-    let y = 0;
+const spawnRock = (engine, pojo) => {
+    let color = pojo && pojo.color || 'red';
+    let x = pojo && pojo.x || 0;
+    let y = pojo && pojo.y || 0;
     let width = 50;
     let height = 50;
+    let spawnFunctionName = 'spawnRock';
     let customFunction = () => { console.log('I am a custom function and I do deserve some respect!');}
 
     return {
@@ -41,6 +46,12 @@ const spawnRock = (engine) => {
         moveLeft() {
             x -= 10;
         },
+        moveTop() {
+            y -= 10;
+        },
+        moveDown() {
+            y += 10;
+        },
         setCustomFunction(f) {
             customFunction = f; 
         },
@@ -52,7 +63,7 @@ const spawnRock = (engine) => {
         },
         toPojo() {
             return {
-                x, y, width, height, customFunction
+                x, y, width, height, color, customFunction, spawnFunctionName
             }
         }
     }
@@ -111,7 +122,7 @@ const createEngine = (canvas) => {
                 return value;
             }
 
-            return JSON.parse(serializedObjects, reviver);
+            return serializedObjects.map((obj) => JSON.parse(obj, reviver));
         }
     }
 }
